@@ -157,6 +157,8 @@ task main(){
 					break;
 				}
 			}
+			motor[L_motor] = 0;
+			motor[R_motor] = 0;
 			robot_state = Deliver;
 			break;
 			// end Forward
@@ -186,14 +188,16 @@ task main(){
 
 
 			// The process of delivering the cable to the beacon, this involves lowering the arm and raising it.
-		case Deliver:
-
+		case Deliver: // need to add friction to the cable giver so when robot is moving, it doesn't pull out too much and get caught
+			// move arm dwon
+			// wait there for a sec
+			// bring it back up
 			break;
 			// end Deliver
 
 			// End case, this will move the robot away from the beacon and end all operation.
 		case End:
-
+		// move away from the beacon by moving backwards then turning the leaving
 			break;
 			// end End
 
