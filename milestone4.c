@@ -176,8 +176,8 @@ task main(){
 			}
 			// turns CCW
 			if(RB_state){
-				motor[L_motor] = 37;
-				motor[R_motor] = -37;
+				motor[L_motor] = -37;
+				motor[R_motor] = 37;
 				wait1Msec(1200); 	// might have to change time amount
 				turn(1, 300); // mgiht have to change turn amount
 				robot_state = Forward;
@@ -189,15 +189,32 @@ task main(){
 
 			// The process of delivering the cable to the beacon, this involves lowering the arm and raising it.
 		case Deliver: // need to add friction to the cable giver so when robot is moving, it doesn't pull out too much and get caught
-			// move arm dwon
-			// wait there for a sec
-			// bring it back up
+			motor[A_motor] = -27; // will 100% have to change
+			wait1Msec(1000);
+			motor[A_motor] = 0; // could change to lower value so it can keep it's position
+			wait1Msec(1000);
+			motor[A_motor] = 50;
+			wait1Msec(500);
+			motor[A_motor] = 0;
+			robot_state = End;
 			break;
 			// end Deliver
 
 			// End case, this will move the robot away from the beacon and end all operation.
 		case End:
 		// move away from the beacon by moving backwards then turning the leaving
+		motor[L_motor] = -37;
+		motor[R_motor] = 37;
+		wait1Msec(1000);
+		motor[L_motor] = 0;
+		motor[R_motor] = 0;
+
+		// this'll trun away from the beacon, if it sees wall, turns the otehr way
+		turn(1, 300);
+		if(SensorValue(USS) < TH){
+			turn(-1, 1200);
+		}
+
 			break;
 			// end End
 
