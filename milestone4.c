@@ -89,13 +89,7 @@ void turn(int direction, int amount){
 	motor[R_motor] = direction * -37;
 	motor[L_motor] = 0;
 	motor[R_motor] = 0;
-}
-
-
-// makes the robot go straight in the direction and amount specified
-void straight(int direction, int amount){
-	continue;
-}
+}// end turn
 
 // end of pre-processor material
 
@@ -119,13 +113,14 @@ task main(){
 		case Initial:
 			if(SB_state == true){
 				SB_state = false;
+				robot_state = Scan;
 				break;
 			}
 			break;
 			// end Initial
 
 			// Scans the area until the beacon is found by comparing left and right IR signals and turning proportionally
-		case Scan: // logical falicy: what if not facing around the beacon?
+		case Scan: // logical falicy: what if not facing around the beacon? edit: kind of fixed, a bit rough
 
 			if(((monitorLight(IRsensorL) < light_threshold ) && (monitorLight(IRsensorR) < light_threshold))){
 				turn(1, 300); // might have to change value of direction and/or amount
@@ -142,8 +137,9 @@ task main(){
 			// end Scan
 
 			// moves forward until one of three condistion are met, then it'll swich case, after correcting, it'll come back here unless the new case it Deliver
-		case Forward :
+		case Forward:
 
+			// this if statement should never run, only in as safty measure
 			if(diff_IRR_IRL > 10 || diff_IRR_IRL < -10){
 				robot_state = Scan;
 				break;
@@ -152,7 +148,7 @@ task main(){
 			while(SensorValue(USS) > TH){ // assuming taht there is no way it would be in forward without facing the beacon
 
 				motor[L_motor] = 37; // again , the constant or velosity might have to be changed as each motor migh tbe different
-				motor[R_motor] = -37; //might need to switch positive and negative
+				motor[R_motor] = -37;
 
 				if(LB_state || RB_state){
 					motor[L_motor] = 0; // could reverse for quick sec to break
@@ -161,13 +157,30 @@ task main(){
 					break;
 				}
 			}
-		robot_state = Deliver;
+			robot_state = Deliver;
 			break;
 			// end Forward
 
-			// Turns the robot, might be purged due to function "turn"
+			// Turns the robot in direction specified by with limit switch was pressed
 		case Turning:
-
+			// turns CW
+			if(LB_state){
+				motor[L_motor] = -37;
+				motor[R_motor] = 37;
+				wait1Msec(1200); 	// might have to change time amount
+				turn(-1, 300); // might also have to change turn amount
+				robot_state = Forward;
+				break;
+			}
+			// turns CCW
+			if(RB_state){
+				motor[L_motor] = 37;
+				motor[R_motor] = -37;
+				wait1Msec(1200); 	// might have to change time amount
+				turn(1, 300); // mgiht have to change turn amount
+				robot_state = Forward;
+				break;
+			}
 			break;
 			// end Turning
 
@@ -178,7 +191,7 @@ task main(){
 			break;
 			// end Deliver
 
-			// End case, this will move the robot away from the beacon and end operation.
+			// End case, this will move the robot away from the beacon and end all operation.
 		case End:
 
 			break;
