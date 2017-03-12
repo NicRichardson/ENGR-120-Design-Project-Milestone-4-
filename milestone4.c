@@ -1,5 +1,6 @@
 #pragma config(I2C_Usage, I2C1, i2cSensors)
-#pragma config(Sensor, in1,    IRsensorM,      sensorReflection)
+#pragma config(Sensor, in1,    IRsensorL,      sensorReflection)
+#pragma config(Sensor, in2,    IRsensorR,      sensorReflection)
 #pragma config(Sensor, dgtl1,  Button_R,       sensorTouch)
 #pragma config(Sensor, dgtl2,  start_button,   sensorTouch)
 #pragma config(Sensor, dgtl3,  USS,            sensorSONAR_raw)
@@ -24,6 +25,7 @@ typedef enum {
 
 const int light_threshold = 512; 	// threshold for the IR sensor to switch between states
 const int TH = 1000; 							// threshold for the Ultrasonic sensor
+const int turning_weight = 1; 									// constant for turning weight
 
 // code to set the bool state of the buttons
 bool SB_state = false;
@@ -45,13 +47,13 @@ void button(){
 // Perform processing of measurements.
 // Should be called with rate of at least 20 Hertz for proper detection of puck.
 // I made this a function with one parameter, the IR sensor that that booleen value is wanted
-int monitorLight(){
+int monitorLight(int IRsensor){
 
 	static int minLevelIR = 4096;	// Minimum light level seen by IR sensor 1
 	static int maxLevelIR = 0;			// Maximum light level seen by IR sensor 1
 	static int diffLevelIR = 0;		// Delta between maximum and minimum seen in last 0.1 seconds
 
-	int lightLevel = SensorValue[IRsensorM];
+	int lightLevel = SensorValue[IRsensor];
 	//bool returnValue;
 
 	// Check if 100 msecs have elapsed.
@@ -89,7 +91,14 @@ int monitorLight(){
 
 // turns the robot in the direction and amount specified
 void turn(int direction, int amount){
-	continue;
+	while(getMotorEncoder(L_motor) < amount || getMotorEncoder(R_motor) < amount){
+		motor[L_motor] = direction * 37;
+		motor[R_motor] = direction * 37;
+	}
+	motor[L_motor] = direction * -37;
+	motor[R_motor] = direction * -37;
+	motor[L_motor] = 0;
+	motor[R_motor] = 0;
 }
 
 
@@ -113,15 +122,25 @@ task main(){
 		button();
 		resetMotorEncoder(L_motor);
 		resetMotorEncoder(R_motor);
-		int IRval = monitorLight();
+		int diff_IRR_IRL = monitorLight(IRsensorR) - monitorLight(IRsensorL);
 
 		switch (robot_state){
+			// when robot is in rest at the beginning, waits for startt button to be pressed
 		case Initial:
-
+			if(SB_state == true){
+				SB_state = false;
+				break;
+			}
 			break;
+			// end Initial
 
+			// Scans the area until the beacon is found by comparing left and right IR signals and turning proportionally
 		case Scan:
-
+			while(diff_IRR_IRL != 0){
+				motor[L_motor] = diff_IRR_IRL * turning_weight;
+				motor[R_motor] = diff_IRR_IRL * turning_weight;
+			}
+			robot_state = Forward;
 			break;
 
 		case Forward :
