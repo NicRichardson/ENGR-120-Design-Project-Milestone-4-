@@ -202,19 +202,20 @@ task main(){
 
 			// End case, this will move the robot away from the beacon and end all operation.
 		case End:
-		// move away from the beacon by moving backwards then turning the leaving
-		motor[L_motor] = -37;
-		motor[R_motor] = 37;
-		wait1Msec(1000);
-		motor[L_motor] = 0;
-		motor[R_motor] = 0;
+			// move away from the beacon by moving backwards then turning the leaving
+			motor[L_motor] = -37;
+			motor[R_motor] = 37;
+			wait1Msec(1000);
+			motor[L_motor] = 0;
+			motor[R_motor] = 0;
 
-		// this'll trun away from the beacon, if it sees wall, turns the otehr way
-		turn(1, 300);
-		if(SensorValue(USS) < TH){
-			turn(-1, 1200);
-		}
-
+			// this'll trun away from the beacon, if it sees wall, turns the otehr way
+			turn(1, 300);
+			if(SensorValue(USS) < TH){
+				turn(-1, 1200);
+			}
+			// more can be added, whatever is neede of the ending process
+			robot_state = Initial;
 			break;
 			// end End
 
