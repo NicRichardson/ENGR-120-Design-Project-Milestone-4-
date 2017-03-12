@@ -93,7 +93,7 @@ int monitorLight(int IRsensor){
 void turn(int direction, int amount){
 	while(getMotorEncoder(L_motor) < amount || getMotorEncoder(R_motor) < amount){
 		motor[L_motor] = direction * 37;
-		motor[R_motor] = direction * 37;
+		motor[R_motor] = direction * 37; // each motor might have the absolute turn multiplier chenge as each might be different
 	}
 	motor[L_motor] = direction * -37;
 	motor[R_motor] = direction * -37;
@@ -135,30 +135,62 @@ task main(){
 			// end Initial
 
 			// Scans the area until the beacon is found by comparing left and right IR signals and turning proportionally
-		case Scan:
-			while(diff_IRR_IRL != 0){
-				motor[L_motor] = diff_IRR_IRL * turning_weight;
-				motor[R_motor] = diff_IRR_IRL * turning_weight;
-			}
-			robot_state = Forward;
-			break;
+		case Scan: // logical falicy: what if not facing around the beacon?
 
+
+
+
+		/*if(monitorLight(IRsensorL != IRsensorR)){
+				while(diff_IRR_IRL != 0){
+					motor[L_motor] = diff_IRR_IRL * turning_weight; // turing_weight will probably have to be changed
+					motor[R_motor] = diff_IRR_IRL * turning_weight;
+				}
+				robot_state = Forward;
+			}*/
+			break;
+			// end Scan
+
+			// moves forward until one of three condistion are met, then it'll swich case, after correcting, it'll come back here unless the new case it Deliver
 		case Forward :
 
-			break;
+			while(SensorValue(USS) > TH)){ // assuming taht there is no way it would be in forward without facing the beacon
 
+				motor[L_motor] = 37; // again , the constant or velosity might have to be changed as each motor migh tbe different
+				motor[R_motor] = -37; //might need to switch positive and negative
+
+				if(LB_state || RB_state){
+					motor[L_motor] = 0; // could reverse for quick sec to break
+					motor[R_motor] = 0;
+					robot_state = Turning;
+					break;
+				}
+
+
+			}
+
+			break;
+			// end Forward
+
+			// Turns the robot, might be purged due to function "turn"
 		case Turning:
 
 			break;
+			// end Turning
 
+
+			// The process of delivering the cable to the beacon, this involves lowering the arm and raising it.
 		case Deliver:
 
 			break;
+			// end Deliver
 
+			// End case, this will move the robot away from the beacon and end operation.
 		case End:
 
 			break;
-		}
+			// end End
+
+		}// end switch(robot_state)
 
 	} // end while(true) loop
 
