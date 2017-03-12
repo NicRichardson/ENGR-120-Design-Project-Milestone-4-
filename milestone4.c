@@ -25,7 +25,7 @@ typedef enum {
 
 const int light_threshold = 512; 	// threshold for the IR sensor to switch between states
 const int TH = 1000; 							// threshold for the Ultrasonic sensor
-const int turning_weight = 1; 									// constant for turning weight
+const int turning_weight = 1; 		// constant for turning weight
 
 // code to set the bool state of the buttons
 bool SB_state = false;
@@ -46,7 +46,7 @@ void button(){
 
 // Perform processing of measurements.
 // Should be called with rate of at least 20 Hertz for proper detection of puck.
-// I made this a function with one parameter, the IR sensor that that booleen value is wanted
+// it will return diffLevelIR
 int monitorLight(int IRsensor){
 
 	static int minLevelIR = 4096;	// Minimum light level seen by IR sensor 1
@@ -54,7 +54,6 @@ int monitorLight(int IRsensor){
 	static int diffLevelIR = 0;		// Delta between maximum and minimum seen in last 0.1 seconds
 
 	int lightLevel = SensorValue[IRsensor];
-	//bool returnValue;
 
 	// Check if 100 msecs have elapsed.
 	if ( time1[T1] > 100 )  {
@@ -76,15 +75,6 @@ int monitorLight(int IRsensor){
 			maxLevelIR = lightLevel;
 		}
 	}
-
-	// Check if light level difference over threshold.
-	/*if ( diffLevelIR > light_threshold ) {
-	returnValue = true;
-	} else {
-	returnValue = false;
-
-	}*/
-
 	return(diffLevelIR);
 } // end of IR sensor code
 
@@ -137,23 +127,29 @@ task main(){
 			// Scans the area until the beacon is found by comparing left and right IR signals and turning proportionally
 		case Scan: // logical falicy: what if not facing around the beacon?
 
-
-
-
-		/*if(monitorLight(IRsensorL != IRsensorR)){
-				while(diff_IRR_IRL != 0){
-					motor[L_motor] = diff_IRR_IRL * turning_weight; // turing_weight will probably have to be changed
-					motor[R_motor] = diff_IRR_IRL * turning_weight;
+			if(((monitorLight(IRsensorL) < light_threshold ) && (monitorLight(IRsensorR) < light_threshold))){
+				turn(1, 300); // might have to change value of direction and/or amount
+				if(((monitorLight(IRsensorL) < light_threshold ) && (monitorLight(IRsensorR) < light_threshold))){
+					turn(-1, 1200); // might have to change value of direction and/or amount
 				}
-				robot_state = Forward;
-			}*/
+			}
+			while(diff_IRR_IRL > 10 || diff_IRR_IRL < -10){ // changed it becasue at low motor speeds it can't run and it'll never get to where it wants, was: diff_IRR_IRL != 0
+				motor[L_motor] = diff_IRR_IRL * turning_weight; // turing_weight will have to be changed
+				motor[R_motor] = diff_IRR_IRL * turning_weight;
+			}
+			robot_state = Forward;
 			break;
 			// end Scan
 
 			// moves forward until one of three condistion are met, then it'll swich case, after correcting, it'll come back here unless the new case it Deliver
 		case Forward :
 
-			while(SensorValue(USS) > TH)){ // assuming taht there is no way it would be in forward without facing the beacon
+			if(diff_IRR_IRL > 10 || diff_IRR_IRL < -10){
+				robot_state = Scan;
+				break;
+			}
+
+			while(SensorValue(USS) > TH){ // assuming taht there is no way it would be in forward without facing the beacon
 
 				motor[L_motor] = 37; // again , the constant or velosity might have to be changed as each motor migh tbe different
 				motor[R_motor] = -37; //might need to switch positive and negative
@@ -164,10 +160,8 @@ task main(){
 					robot_state = Turning;
 					break;
 				}
-
-
 			}
-
+		robot_state = Deliver;
 			break;
 			// end Forward
 
