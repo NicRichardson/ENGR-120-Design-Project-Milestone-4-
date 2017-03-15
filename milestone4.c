@@ -115,7 +115,6 @@ task main(){
 		button();
 		resetMotorEncoder(L_motor);
 		resetMotorEncoder(R_motor);
-		diff_IRR_IRL();
 
 		switch (robot_state){
 			// when robot is in rest at the beginning, waits for startt button to be pressed
