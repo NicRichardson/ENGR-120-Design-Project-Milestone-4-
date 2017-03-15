@@ -1,6 +1,7 @@
 #pragma config(I2C_Usage, I2C1, i2cSensors)
-#pragma config(Sensor, in1,    IRsensorL,      sensorReflection)
-#pragma config(Sensor, in2,    IRsensorR,      sensorReflection)
+#pragma config(Sensor, in1,    IRsensorL,      sensorNone)
+#pragma config(Sensor, in2,    IRsensorR,      sensorNone)
+#pragma config(Sensor, in3,    IRsensorM,      sensorReflection)
 #pragma config(Sensor, dgtl1,  Button_R,       sensorTouch)
 #pragma config(Sensor, dgtl2,  start_button,   sensorTouch)
 #pragma config(Sensor, dgtl3,  USS,            sensorSONAR_raw)
@@ -25,11 +26,11 @@ typedef enum {
 
 const int light_threshold = 512; 	// threshold for the IR sensor to switch between states
 const int TH = 1000; 							// threshold for the Ultrasonic sensor
-const int turning_weight = 1; 		// constant for turning weight
+//const int turning_weight = 1; 		// constant for turning weight
 
 // code to set the bool state of the buttons
 bool SB_state = false;
-bool LB_state = false;
+bool LB_state = false; // ask about how to use
 bool RB_state = false;
 
 void button(){
@@ -46,14 +47,14 @@ void button(){
 
 // Perform processing of measurements.
 // Should be called with rate of at least 20 Hertz for proper detection of puck.
-// it will return diffLevelIR
-int monitorLight(int IRsensor){
+bool monitorLight(int lightLevel){
 
 	static int minLevelIR = 4096;	// Minimum light level seen by IR sensor 1
 	static int maxLevelIR = 0;			// Maximum light level seen by IR sensor 1
 	static int diffLevelIR = 0;		// Delta between maximum and minimum seen in last 0.1 seconds
 
-	int lightLevel = SensorValue[IRsensor];
+	//int lightLevel = SensorValue[IRsensor];
+	bool returnValue;
 
 	// Check if 100 msecs have elapsed.
 	if ( time1[T1] > 100 )  {
@@ -76,12 +77,14 @@ int monitorLight(int IRsensor){
 		}
 	}
 
-	if(diffLevelIR > light_threshold){
-		return diffLevelIR;
+	// Check if light level difference over threshold.
+	if ( diffLevelIR > light_threshold ) {
+		returnValue = true;
+		} else {
+		returnValue = false;
 	}
-	else{
-		return 0;
-	}
+
+	return(returnValue);
 } // end of IR sensor code
 
 
@@ -96,10 +99,6 @@ void turn(int direction, int amount){
 	motor[L_motor] = 0;
 	motor[R_motor] = 0;
 }// end turn
-
-int diff_IRR_IRL(){
-	return monitorLight(IRsensorR) - monitorLight(IRsensorL);
-}
 
 // end of pre-processor material
 
@@ -129,45 +128,15 @@ task main(){
 			break;
 			// end Initial
 
-			// Scans the area until the beacon is found by comparing left and right IR signals and turning proportionally
-		case Scan: // logical falicy: what if not facing around the beacon? edit: kind of fixed, a bit rough
+			// Scans the area until the beacon is found by rotating
+		case Scan:
 
-			while(monitorLight(IRsensorL) < 3500 && monitorLight(IRsensorR) < 3500){
-				motor[L_motor] = 50;
-				motor[R_motor] = 50;
-				if(abs(getMotorEncoder(L_motor)) > 600){
-					while(monitorLight(IRsensorL) < 3500 && monitorLight(IRsensorR) < 3500){
-						motor[L_motor] = -50;
-						motor[R_motor] = -50;
-					}
-					break;
-				}
+			while(!monitorLight(SensorValue(IRsensorM))){
+				motor[L_motor] = 40;
+				motor[R_motor] = 40;
 			}
 			motor[L_motor] = 0;
 			motor[R_motor] = 0;
-
-			/*
-			while(IRsensorR < light_threshold){
-			motor[L_motor] = 37;
-			motor[R_motor] = 37;
-			}
-			motor[L_motor] = 0;
-			motor[R_motor] = 0;
-
-
-			if(((monitorLight(IRsensorL) < light_threshold ) && (monitorLight(IRsensorR) < light_threshold))){
-			turn(1, 300); // might have to change value of direction and/or amount
-			if(((monitorLight(IRsensorL) < light_threshold ) && (monitorLight(IRsensorR) < light_threshold))){
-			turn(-1, 800); // might have to change value of direction and/or amount
-			}
-			}
-
-			while(diff_IRR_IRL() > 500 || diff_IRR_IRL() < -500){ // changed it becasue at low motor speeds it can't run and it'll never get to where it wants, was: diff_IRR_IRL != 0
-			motor[L_motor] = diff_IRR_IRL() * turning_weight; // turing_weight will have to be changed
-			motor[R_motor] = diff_IRR_IRL() * turning_weight; // maybe change so it is proportional to the diff_IRR_IRL so it can move as cloce angles
-			}
-			*/
-
 			robot_state = Forward;
 			break;
 			// end Scan
@@ -175,17 +144,17 @@ task main(){
 			// moves forward until one of three condistion are met, then it'll swich case, after correcting, it'll come back here unless the new case it Deliver
 		case Forward:
 
-			// this if statement should never run, only in as safty measure
-			if (monitorLight(IRsensorR) < 3500 || monitorLight(IRsensorL) <  3500){
+			// this if statement should never run as it should only be facing forwards when in this state
+			if(!monitorLight(SensorValue[IRsensorM])){
 				robot_state = Scan;
 				break;
 			}
 
-			while(SensorValue(USS) > TH){ // assuming taht there is no way it would be in forward without facing the beacon
-
+			while(SensorValue(USS) >= TH){
 				motor[L_motor] = 40; // again , the constant or velosity might have to be changed as each motor migh tbe different
 				motor[R_motor] = -40;
 
+				//this makes sure that the forward state only runs if neither of the side bumpers are not pressed
 				if(LB_state || RB_state){
 					motor[L_motor] = 0; // could reverse for quick sec to break
 					motor[R_motor] = 0;
@@ -254,7 +223,7 @@ task main(){
 			/*
 			turn(1, 300);
 			if(SensorValue(USS) < TH){
-				turn(-1, 1200);
+			turn(-1, 1200);
 			}
 			*/
 			// more can be added, whatever is neede of the ending process
