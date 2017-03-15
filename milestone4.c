@@ -75,7 +75,13 @@ int monitorLight(int IRsensor){
 			maxLevelIR = lightLevel;
 		}
 	}
-	return(diffLevelIR);
+
+	if(diffLevelIR > light_threshold){
+		return diffLevelIR;
+	}
+	else{
+		return 0;
+	}
 } // end of IR sensor code
 
 
@@ -90,6 +96,10 @@ void turn(int direction, int amount){
 	motor[L_motor] = 0;
 	motor[R_motor] = 0;
 }// end turn
+
+int diff_IRR_IRL(){
+	return monitorLight(IRsensorR) - monitorLight(IRsensorL);
+}
 
 // end of pre-processor material
 
@@ -106,7 +116,7 @@ task main(){
 		button();
 		resetMotorEncoder(L_motor);
 		resetMotorEncoder(R_motor);
-		int diff_IRR_IRL = monitorLight(IRsensorR) - monitorLight(IRsensorL);
+		diff_IRR_IRL();
 
 		switch (robot_state){
 			// when robot is in rest at the beginning, waits for startt button to be pressed
@@ -122,16 +132,42 @@ task main(){
 			// Scans the area until the beacon is found by comparing left and right IR signals and turning proportionally
 		case Scan: // logical falicy: what if not facing around the beacon? edit: kind of fixed, a bit rough
 
-			if(((monitorLight(IRsensorL) < light_threshold ) && (monitorLight(IRsensorR) < light_threshold))){
-				turn(1, 300); // might have to change value of direction and/or amount
-				if(((monitorLight(IRsensorL) < light_threshold ) && (monitorLight(IRsensorR) < light_threshold))){
-					turn(-1, 1200); // might have to change value of direction and/or amount
+			while(monitorLight(IRsensorL) < 3500 && monitorLight(IRsensorR) < 3500){
+				motor[L_motor] = 50;
+				motor[R_motor] = 50;
+				if(abs(getMotorEncoder(L_motor)) > 600){
+					while(monitorLight(IRsensorL) < 3500 && monitorLight(IRsensorR) < 3500){
+						motor[L_motor] = -50;
+						motor[R_motor] = -50;
+					}
+					break;
 				}
 			}
-			while(diff_IRR_IRL > 10 || diff_IRR_IRL < -10){ // changed it becasue at low motor speeds it can't run and it'll never get to where it wants, was: diff_IRR_IRL != 0
-				motor[L_motor] = diff_IRR_IRL * turning_weight; // turing_weight will have to be changed
-				motor[R_motor] = diff_IRR_IRL * turning_weight;
+			motor[L_motor] = 0;
+			motor[R_motor] = 0;
+
+			/*
+			while(IRsensorR < light_threshold){
+			motor[L_motor] = 37;
+			motor[R_motor] = 37;
 			}
+			motor[L_motor] = 0;
+			motor[R_motor] = 0;
+
+
+			if(((monitorLight(IRsensorL) < light_threshold ) && (monitorLight(IRsensorR) < light_threshold))){
+			turn(1, 300); // might have to change value of direction and/or amount
+			if(((monitorLight(IRsensorL) < light_threshold ) && (monitorLight(IRsensorR) < light_threshold))){
+			turn(-1, 800); // might have to change value of direction and/or amount
+			}
+			}
+
+			while(diff_IRR_IRL() > 500 || diff_IRR_IRL() < -500){ // changed it becasue at low motor speeds it can't run and it'll never get to where it wants, was: diff_IRR_IRL != 0
+			motor[L_motor] = diff_IRR_IRL() * turning_weight; // turing_weight will have to be changed
+			motor[R_motor] = diff_IRR_IRL() * turning_weight; // maybe change so it is proportional to the diff_IRR_IRL so it can move as cloce angles
+			}
+			*/
+
 			robot_state = Forward;
 			break;
 			// end Scan
@@ -140,15 +176,15 @@ task main(){
 		case Forward:
 
 			// this if statement should never run, only in as safty measure
-			if(diff_IRR_IRL > 10 || diff_IRR_IRL < -10){
+			if (monitorLight(IRsensorR) < 3500 || monitorLight(IRsensorL) <  3500){
 				robot_state = Scan;
 				break;
 			}
 
 			while(SensorValue(USS) > TH){ // assuming taht there is no way it would be in forward without facing the beacon
 
-				motor[L_motor] = 37; // again , the constant or velosity might have to be changed as each motor migh tbe different
-				motor[R_motor] = -37;
+				motor[L_motor] = 40; // again , the constant or velosity might have to be changed as each motor migh tbe different
+				motor[R_motor] = -40;
 
 				if(LB_state || RB_state){
 					motor[L_motor] = 0; // could reverse for quick sec to break
@@ -170,6 +206,8 @@ task main(){
 				motor[L_motor] = -37;
 				motor[R_motor] = 37;
 				wait1Msec(1200); 	// might have to change time amount
+				motor[L_motor] = 0;
+				motor[R_motor] = 0;
 				turn(-1, 300); // might also have to change turn amount
 				robot_state = Forward;
 				break;
@@ -178,6 +216,8 @@ task main(){
 			if(RB_state){
 				motor[L_motor] = -37;
 				motor[R_motor] = 37;
+				motor[L_motor] = 0;
+				motor[A_motor] = 0;
 				wait1Msec(1200); 	// might have to change time amount
 				turn(1, 300); // mgiht have to change turn amount
 				robot_state = Forward;
@@ -190,13 +230,13 @@ task main(){
 			// The process of delivering the cable to the beacon, this involves lowering the arm and raising it.
 		case Deliver: // need to add friction to the cable giver so when robot is moving, it doesn't pull out too much and get caught
 			motor[A_motor] = -27; // will 100% have to change
-			wait1Msec(1000);
+			wait1Msec(100);
 			motor[A_motor] = 0; // could change to lower value so it can keep it's position
 			wait1Msec(1000);
 			motor[A_motor] = 50;
-			wait1Msec(500);
+			wait1Msec(250);
 			motor[A_motor] = 0;
-			robot_state = End;
+			robot_state = End; // should change to End
 			break;
 			// end Deliver
 
@@ -209,11 +249,14 @@ task main(){
 			motor[L_motor] = 0;
 			motor[R_motor] = 0;
 
-			// this'll trun away from the beacon, if it sees wall, turns the otehr way
+			// this'll trun away from the beacon, if it sees wall, turns the otehr
+			// maybe copy
+			/*
 			turn(1, 300);
 			if(SensorValue(USS) < TH){
 				turn(-1, 1200);
 			}
+			*/
 			// more can be added, whatever is neede of the ending process
 			robot_state = Initial;
 			break;
