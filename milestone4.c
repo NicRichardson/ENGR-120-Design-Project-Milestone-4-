@@ -1,7 +1,7 @@
 #pragma config(I2C_Usage, I2C1, i2cSensors)
-#pragma config(Sensor, in1,    IRsensorL,      sensorNone)
+#pragma config(Sensor, in1,    IRsensorM,      sensorReflection)
 #pragma config(Sensor, in2,    IRsensorR,      sensorNone)
-#pragma config(Sensor, in3,    IRsensorM,      sensorReflection)
+#pragma config(Sensor, in3,    IRsensorL,      sensorNone)
 #pragma config(Sensor, dgtl1,  Button_R,       sensorTouch)
 #pragma config(Sensor, dgtl2,  start_button,   sensorTouch)
 #pragma config(Sensor, dgtl3,  USS,            sensorSONAR_raw)
@@ -24,7 +24,7 @@ typedef enum {
 	End
 } T_State;
 
-const int light_threshold = 512; 	// threshold for the IR sensor to switch between states
+const int light_threshold = 1024; 	// threshold for the IR sensor to switch between states
 const int TH = 1000; 							// threshold for the Ultrasonic sensor
 //const int turning_weight = 1; 		// constant for turning weight
 
@@ -89,6 +89,7 @@ bool monitorLight(int lightLevel){
 
 
 // turns the robot in the direction and amount specified
+// CW is -1, CCW is 1 for direction
 void turn(int direction, int amount){
 	while(getMotorEncoder(L_motor) < amount || getMotorEncoder(R_motor) < amount){
 		motor[L_motor] = direction * 37;
@@ -110,11 +111,13 @@ task main(){
 
 	T_State robot_state = Initial;
 
+
 	while(true){
 
 		button();
 		resetMotorEncoder(L_motor);
 		resetMotorEncoder(R_motor);
+		monitorLight(SensorValue(IRsensorM));
 
 		switch (robot_state){
 			// when robot is in rest at the beginning, waits for startt button to be pressed
@@ -226,7 +229,7 @@ task main(){
 			}
 			*/
 			// more can be added, whatever is neede of the ending process
-			robot_state = Initial;
+		//	robot_state = Initial;
 			break;
 			// end End
 
