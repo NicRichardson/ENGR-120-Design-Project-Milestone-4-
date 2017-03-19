@@ -200,25 +200,34 @@ task main(){
 
 			// The process of delivering the cable to the beacon, this involves lowering the arm and raising it.
 		case Deliver: // need to add friction to the cable giver so when robot is moving, it doesn't pull out too much and get caught
-			motor[A_motor] = -27; // will 100% have to change
-			wait1Msec(100);
-			motor[A_motor] = 0; // could change to lower value so it can keep it's position
-			wait1Msec(1000);
-			motor[A_motor] = 50;
-			wait1Msec(250);
+			motor[A_motor] = -30; // will 100% have to change
+			wait1Msec(425);
+			motor[A_motor] = 5; // could change to lower value so it can keep it's position
+			wait1Msec(1200);
+			motor[A_motor] = 40;
+			wait1Msec(250); // 140 works nice for rising it not all the way
 			motor[A_motor] = 0;
-			robot_state = End; // should change to End
+
+			//
+
+			//
+			motor[L_motor] = -37;
+			motor[R_motor] = 37;
+			wait1Msec(500);
+			motor[L_motor] = 0;
+			motor[R_motor] = 0;
+			robot_state = End;
 			break;
 			// end Deliver
 
 			// End case, this will move the robot away from the beacon and end all operation.
 		case End:
 			// move away from the beacon by moving backwards then turning the leaving
-			motor[L_motor] = -37;
-			motor[R_motor] = 37;
-			wait1Msec(1000);
-			motor[L_motor] = 0;
-			motor[R_motor] = 0;
+
+			SB_state = false;
+			robot_state = Initial;
+
+
 
 			// this'll trun away from the beacon, if it sees wall, turns the otehr
 			// maybe copy
@@ -229,7 +238,7 @@ task main(){
 			}
 			*/
 			// more can be added, whatever is neede of the ending process
-		//	robot_state = Initial;
+			//	robot_state = Initial;
 			break;
 			// end End
 
