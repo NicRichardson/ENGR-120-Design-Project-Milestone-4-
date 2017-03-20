@@ -149,7 +149,7 @@ task main(){
 		case Forward:
 
 			// this if statement should never run as it should only be facing forwards when in this state
-			if(!monitorLight(SensorValue[IRsensorM])){
+			if(!monitorLight(SensorValue(IRsensorM))){
 				robot_state = Scan;
 				break;
 			}
