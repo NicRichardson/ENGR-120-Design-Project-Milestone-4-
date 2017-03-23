@@ -26,13 +26,15 @@ typedef enum {
 } T_State;
 
 const int light_threshold = 512; 	// threshold for the IR sensor to switch between states
-const int TH = 1000; 							// threshold for the Ultrasonic sensor
+const int TH = 1000; 							// threshold for the Ultrasonic sensor, basically how far the robot can be from the wall
 
 // code to set the bool state of the buttons
 bool SB_state = false;
-bool LB_state = false; // ask about how to use
+bool LB_state = false;
 bool RB_state = false;
 
+
+//code to check to see if the buttons are pressed
 void button(){
 	if(SensorValue(start_button) && !SB_state){
 		SB_state = true;
@@ -93,7 +95,7 @@ bool monitorLight(int lightLevel){
 void turn(int direction, int amount){
 	while(direction*getMotorEncoder(L_motor) < amount || direction*getMotorEncoder(R_motor) < amount){
 		motor[L_motor] = direction * 37;
-		motor[R_motor] = direction * 37; // each motor might have the absolute turn multiplier chenge as each might be different
+		motor[R_motor] = direction * 37;
 	}
 	motor[L_motor] = direction * -37;
 	motor[R_motor] = direction * -37;
@@ -111,26 +113,26 @@ task main(){
 
 	T_State robot_state = Initial;
 
-
 	while(true){
 
+		// the four following run every cycle to update all the values from sesors
 		button();
 		resetMotorEncoder(L_motor);
 		resetMotorEncoder(R_motor);
 		monitorLight(SensorValue(IRsensorM));
 
+		// when robot is in rest at the beginning, it waits for start button to be pressed
 		switch (robot_state){
-			// when robot is in rest at the beginning, waits for startt button to be pressed
 		case Initial:
 			if(SB_state == true){
 				SB_state = false;
-				robot_state = Scan; // SCAN SSCAN SCAN SCAN
+				robot_state = Scan;
 				break;
 			}
 			break;
 			// end Initial
 
-			// Scans the area until the beacon is found by rotating
+			// Scans the area until the beacon is found by rotating CCW
 		case Scan:
 
 			while(!monitorLight(SensorValue(IRsensorM))){
@@ -145,7 +147,7 @@ task main(){
 			break;
 			// end Scan
 
-			// moves forward until one of three condistion are met, then it'll swich case, after correcting, it'll come back here unless the new case it Deliver
+			// moves forward until one of three condistion are met, then it'll swich case, after correcting, it'll come back here unless it can go into the Deliver state
 		case Forward:
 
 			// this if statement should never run as it should only be facing forwards when in this state
@@ -154,13 +156,14 @@ task main(){
 				break;
 			}
 
+			//moves forward until the ultrasonic sensor senses something, ie, something is close to the front of the robot
 			while(SensorValue(USS) >= TH){
-				motor[L_motor] = 40; // again , the constant or velosity might have to be changed as each motor migh tbe different
+				motor[L_motor] = 40;
 				motor[R_motor] = -50;
 
 				//this makes sure that the forward state only runs if neither of the side bumpers are not pressed
 				if(LB_state || RB_state){
-					motor[L_motor] = 0; // could reverse for quick sec to break
+					motor[L_motor] = 0;
 					motor[R_motor] = 0;
 					robot_state = Turning;
 					break;
@@ -178,10 +181,10 @@ task main(){
 			if(LB_state){
 				motor[L_motor] = -37;
 				motor[R_motor] = 37;
-				wait1Msec(1200); 	// might have to change time amount
+				wait1Msec(1200);
 				motor[L_motor] = 0;
 				motor[R_motor] = 0;
-				turn(-1, 300); // might also have to change turn amount
+				turn(-1, 300);
 				robot_state = Forward;
 				break;
 			}
@@ -191,8 +194,8 @@ task main(){
 				motor[R_motor] = 37;
 				motor[L_motor] = 0;
 				motor[R_motor] = 0;
-				wait1Msec(1200); 	// might have to change time amount
-				turn(1, 300); // mgiht have to change turn amount
+				wait1Msec(1200);
+				turn(1, 300);
 				robot_state = Forward;
 				break;
 			}
@@ -200,11 +203,11 @@ task main(){
 			// end Turning
 
 
-			// The process of delivering the cable to the beacon, this involves lowering the arm and raising it.
-		case Deliver: // need to add friction to the cable giver so when robot is moving, it doesn't pull out too much and get caught
+			// The process of delivering the cable to the beacon, this involves lowering the arm and raising it, also leaving the beacon.
+		case Deliver:
 			motor[A_motor] = -15; // lower arm
-			wait1Msec(790); // waits down
-			motor[A_motor] = 10; // keeps arm level
+			wait1Msec(790); 			// arm waits down
+			motor[A_motor] = 10; 	// keeps arm level
 			wait1Msec(1200);
 
 
@@ -212,15 +215,16 @@ task main(){
 			wait1Msec(50);
 			motor[A_motor] = 10;
 
-			turn(-1, 300); // turns away from
+			turn(-1, 300); 				// turns away from the beacon
 
-			motor[A_motor] = 30;
+			motor[A_motor] = 30;	// moves the arm back up
 			wait1Msec(330);
 			motor[A_motor] = 0;
 
 
-			//
+			//signals completion by spinning a motor
 			motor[C_motor] = 100;
+			//moves until it finds a wall
 			while(SensorValue(USS) >= TH){
 				motor[L_motor] = 40;
 				motor[R_motor] = -40;
@@ -228,15 +232,15 @@ task main(){
 			motor[L_motor] = 0;
 			motor[R_motor] = 0;
 			wait1Msec(1000);
+			// stops the completion motor
 			motor[C_motor] = 0;
 
 			robot_state = End;
 			break;
 			// end Deliver
 
-			// End case, this will move the robot away from the beacon and end all operation.
+			// End case, end all operation.
 		case End:
-			// move away from the beacon by moving backwards then turning the leaving
 
 			SB_state = false;
 			robot_state = Initial;
