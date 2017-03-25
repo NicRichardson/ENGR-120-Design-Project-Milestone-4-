@@ -35,7 +35,7 @@ bool RB_state = false;
 
 
 //code to check to see if the buttons are pressed
-void button(){
+void update_button_values(){
 	if(SensorValue(start_button) && !SB_state){
 		SB_state = true;
 	}
@@ -115,8 +115,8 @@ task main(){
 
 	while(true){
 
-		// the four following run every cycle to update all the values from sesors
-		button();
+		// the four following run every cycle to update all the values from sensors
+		update_button_values();
 		resetMotorEncoder(L_motor);
 		resetMotorEncoder(R_motor);
 		monitorLight(SensorValue(IRsensorM));
@@ -132,7 +132,7 @@ task main(){
 			break;
 			// end Initial
 
-			// Scans the area until the beacon is found by rotating CCW
+			// Scans the area until the beacon is found by rotating the robot CCW
 		case Scan:
 
 			while(!monitorLight(SensorValue(IRsensorM))){
@@ -175,7 +175,7 @@ task main(){
 			break;
 			// end Forward
 
-			// Turns the robot in direction specified by with limit switch was pressed
+			// Turns the robot in direction specified by with limit switch was pressed to get away from the thing it pressed
 		case Turning:
 			// turns CW
 			if(LB_state){
@@ -222,9 +222,9 @@ task main(){
 			motor[A_motor] = 0;
 
 
-			//signals completion by spinning a motor
+			//signals completion by spinning a motor ("flag")
 			motor[C_motor] = 100;
-			//moves until it finds a wall
+			//moves forward until it finds a wall
 			while(SensorValue(USS) >= TH){
 				motor[L_motor] = 40;
 				motor[R_motor] = -40;
